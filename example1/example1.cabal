@@ -69,7 +69,7 @@ executable example1
 
   -- Other library packages from which modules are imported.
   build-depends:
-    , aeson-pretty
+    -- , aeson-pretty
     , base          ^>=4.19.2.0
 
   -- Directories containing source files.

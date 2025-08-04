@@ -43,6 +43,7 @@
 
             dontBuild = true;
           };
+
           packages-from-plan-json = builtins.map
             (x: {
               name = x.pkg-name;
@@ -70,18 +71,24 @@
 
           # Unwrapped GHC without extra packages
           packages.ghc-unwrapped = pkgs.haskell.compiler.ghc98;
-          haskellProjects.default = {
-            projectRoot = ./.;
-            packages = builtins.listToAttrs (packages-from-plan-json);
-            devShell = {
-              hlsCheck.enable = false;
-              tools = pkgs: {
-                ghcid = null;
-                haskell-language-server = null;
+          haskellProjects.default =
+            let
+              ps = pkgs.lib.lists.take 18 (packages-from-plan-json);
+              p = builtins.listToAttrs (ps);
+            in
+            {
+              projectRoot = ./.;
+              packages = builtins.trace ((x: x.name) (builtins.elemAt ps 17)) p;
+              devShell = {
+                hlsCheck.enable = false;
+                # tools = _: { };
+                tools = pkgs: {
+                  ghcid = null;
+                  haskell-language-server = null;
+                };
+                hoogle = false;
               };
-              hoogle = false;
             };
-          };
 
           apps.generate-plan-json = {
             type = "app";

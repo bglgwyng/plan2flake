@@ -48,6 +48,7 @@
             (x: {
               name = x.pkg-name;
               value = {
+                # source = x.pkg-version;
                 source = "${(unpack-tar-gz-drv x.pkg-name (builtins.fetchurl {
                       url = "https://hackage.haskell.org/package/${x.pkg-name}-${x.pkg-version}/${x.pkg-name}-${x.pkg-version}.tar.gz";
                       sha256 = x.pkg-src-sha256;
@@ -64,6 +65,11 @@
           _module.args.pkgs = import inputs.nixpkgs {
             inherit system;
             config.allowBroken = true;
+            overlays = [
+              (_: _: {
+                testu01 = null;
+              })
+            ];
           };
 
           # Equivalent to  inputs'.nixpkgs.legacyPackages.hello;
@@ -73,15 +79,21 @@
           packages.ghc-unwrapped = pkgs.haskell.compiler.ghc98;
           haskellProjects.default =
             let
-              ps = pkgs.lib.lists.take 18 (packages-from-plan-json);
+              ps =
+                #  pkgs.lib.lists.take 18
+                (packages-from-plan-json);
               p = builtins.listToAttrs (ps);
             in
             {
               projectRoot = ./.;
-              packages = builtins.trace ((x: x.name) (builtins.elemAt ps 17)) p;
+              packages = builtins.trace (builtins.toJSON (builtins.map (x: x) ps))
+                p;
+              defaults.settings.all = {
+                check = false;
+                jailbreak = true;
+              };
               devShell = {
                 hlsCheck.enable = false;
-                # tools = _: { };
                 tools = pkgs: {
                   ghcid = null;
                   haskell-language-server = null;

@@ -70,7 +70,8 @@ executable example1
   -- Other library packages from which modules are imported.
   build-depends:
     -- , aeson-pretty
-    , base          ^>=4.19.2.0
+    , base
+    , servant
 
   -- Directories containing source files.
   hs-source-dirs:   app

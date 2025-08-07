@@ -44,15 +44,38 @@
             dontBuild = true;
           };
 
+
           packages-from-plan-json = builtins.map
             (x: {
               name = x.pkg-name;
               value = {
                 # source = x.pkg-version;
-                source = "${(unpack-tar-gz-drv x.pkg-name (builtins.fetchurl {
-                      url = "https://hackage.haskell.org/package/${x.pkg-name}-${x.pkg-version}/${x.pkg-name}-${x.pkg-version}.tar.gz";
+                source =
+                  let
+                    src-tar-gz = (builtins.fetchurl {
+                      url =
+                        "https://hackage.haskell.org/package/${x.pkg-name}-${x.pkg-version}/${x.pkg-name}-${x.pkg-version}.tar.gz";
                       sha256 = x.pkg-src-sha256;
-                    }))}/${x.pkg-name}-${x.pkg-version}";
+                    });
+                    metadata = (builtins.fetchurl {
+                      url =
+                        "https://hackage.haskell.org/package/${x.pkg-name}-${x.pkg-version}/${x.pkg-name}.cabal";
+                      sha256 = x.pkg-cabal-sha256;
+                    });
+                  in
+                  pkgs.stdenv.mkDerivation {
+                    name = x.pkg-name;
+                    src = src-tar-gz;
+                    installPhase = ''
+                      mkdir -p $out
+                      cd $out
+                      tar -xvf $src --strip-components=1
+                      cp ${metadata} ${x.pkg-name}.cabal
+                    '';
+                    dontBuild = true;
+
+                  };
+
               };
             })
             configureds;
@@ -75,6 +98,18 @@
           # Equivalent to  inputs'.nixpkgs.legacyPackages.hello;
           # packages.default = pkgs.hello;
 
+          packages.foo = pkgs.linkFarm "hi" (builtins.map
+            (x: {
+              name = x.name;
+              path = x.value.source;
+            })
+
+            (
+              builtins.filter
+                (x: true)
+                # (x: x.name == "network-uri")
+                (pkgs.lib.lists.take 1000 packages-from-plan-json)));
+
           # Unwrapped GHC without extra packages
           packages.ghc-unwrapped = pkgs.haskell.compiler.ghc98;
           haskellProjects.default =
@@ -86,11 +121,12 @@
             in
             {
               projectRoot = ./.;
-              packages = builtins.trace (builtins.toJSON (builtins.map (x: x) ps))
-                p;
+              packages = p;
               defaults.settings.all = {
                 check = false;
-                jailbreak = true;
+              };
+              settings = {
+                tasty-quickcheck.jailbreak = true;
               };
               devShell = {
                 hlsCheck.enable = false;
@@ -118,45 +154,9 @@
           };
         };
       flake = let pkgs = inputs.nixpkgs.legacyPackages.x86_64-linux; in rec {
-        # The usual flake attributes can be defined here, including system-
-        # agnostic ones like nixosModule and system-enumerating ones, although
-        # those are more easily expressed in perSystem.
-        # apps.x86_64-linux.default = {
-        #   type = "app";
-        #   program = "${pkgs.writeShellScript "copy-plan-json" ''
-        #     cp ${./plan.json} ./
-        #     echo "plan.json has been copied to the current directory"
-        #   ''}";
-        # };
-        # bar = (pkgs.callPackage "${inputs.nixpkgs}/pkgs/data/misc/hackage/default.nix") { };
-        # baz = (pkgs.stdenv.mkDerivation {
-        #   name = "foo";
-        #   src = (pkgs.callPackage "${inputs.nixpkgs}/pkgs/data/misc/hackage/default.nix") { };
-
-        #   installPhase = ''
-        #     mkdir -p $out
-        #     cd $out
-        #     tar -xvf $src
-        #   '';
-
-        #   dontBuild = true;
-        # });
-        # foo = import (pkgs.stdenv.mkDerivation {
-        #   name = "foo";
-        #   src = (pkgs.callPackage "${inputs.nixpkgs}/pkgs/data/misc/hackage/default.nix") { };
-
-        #   installPhase = ''
-        #     mkdir -p $out
-        #     cd $out
-        #     tar -xvf $src
-        #   '';
-
-        #   dontBuild = true;
-        # });
         plan-json = builtins.fromJSON (builtins.readFile ./plan.json);
         install-plan = plan-json.install-plan;
         pkgs = builtins.map (pkg: { name = pkg.pkg-name; versoin = pkg.pkg-version; }) install-plan;
-        # foo = import (((pkgs.callPackage "${inputs.nixpkgs}/pkgs/data/misc/hackage/default.nix") { }).srcOnly);
       };
     };
 }

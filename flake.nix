@@ -95,21 +95,6 @@
             ];
           };
 
-          # Equivalent to  inputs'.nixpkgs.legacyPackages.hello;
-          # packages.default = pkgs.hello;
-
-          packages.foo = pkgs.linkFarm "hi" (builtins.map
-            (x: {
-              name = x.name;
-              path = x.value.source;
-            })
-
-            (
-              builtins.filter
-                (x: true)
-                # (x: x.name == "network-uri")
-                (pkgs.lib.lists.take 1000 packages-from-plan-json)));
-
           # Unwrapped GHC without extra packages
           packages.ghc-unwrapped = pkgs.haskell.compiler.ghc98;
           haskellProjects.default =

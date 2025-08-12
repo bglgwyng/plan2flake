@@ -57,6 +57,7 @@
                         "https://hackage.haskell.org/package/${x.pkg-name}-${x.pkg-version}/${x.pkg-name}-${x.pkg-version}.tar.gz";
                       sha256 = x.pkg-src-sha256;
                     });
+                    # FIXME: the fetched metadata is the latest and there's no guarantee it matches the hash
                     metadata = (builtins.fetchurl {
                       url =
                         "https://hackage.haskell.org/package/${x.pkg-name}-${x.pkg-version}/${x.pkg-name}.cabal";
